@@ -1,5 +1,4 @@
 import random
-import math
 from pygame import Rect
 
 # -----------------------------
@@ -24,59 +23,36 @@ YELLOW  = (230, 200, 25)
 GREY    = (60, 60, 60)
 BLUE    = (80, 80, 220)
 
+# Histogram Distributions 
 # -----------------------------
-# HISTOGRAM / FUNCTION SETUP
+# CHANGED AS OF 2025-11-20
 # -----------------------------
-# These are simple bar heights for different shapes.
 distributions = [
-    {
-        "name": "Bell-shaped",
-        "heights": [0.1, 0.3, 0.6, 1.0, 0.6, 0.3, 0.1],
-    },
-    {
-        "name": "Skewed Right",
-        "heights": [1.0, 0.9, 0.6, 0.3, 0.15, 0.07, 0.03],
-    },
-    {
-        "name": "Skewed Left",
-        "heights": [0.03, 0.07, 0.15, 0.3, 0.6, 0.9, 1.0],
-    },
-    {
-        "name": "Uniform",
-        "heights": [1.0] * 7,
-    },
-    {
-        "name": "Bimodal (Symmetric)",
-        "heights": [0.9, 0.4, 0.1, 0.4, 0.9, 0.4, 0.1],
-    },
-    {
-        "name": "Bimodal (Non-symmetric)",
-        "heights": [0.2, 0.8, 0.3, 0.1, 0.7, 1.0, 0.4],
-    },
+    {"name": "Normal Distribution","image": "dis_normal.png","ID": 1},
+    {"name": "Skewed Right", "image": "dist_skw_right.png", "ID": 2},
+    {"name": "Skewed Left", "image": "dist_skw_left.png", "ID": 3},
+    {"name": "Uniform", "image": "dist_uniform.png", "ID": 4},
+    {"name": "Bimodal (Symmetric)", "image": "dist_bimodal_sym.png", "ID": 5},
+    {"name": "Bimodal (Non-symmetric)", "image": "dist_bimodal_sym.png", "ID": 6},
+]
+# Functions
+# -----------------------------
+# CHANGED AS OF 2025-11-20
+# -----------------------------
+functions = [
+    {"name": "f(x) = x", "image": "fn_x.png", "ID": 1 },
+    {"name": "f(x) = x^2", "image": "fn_x^2.png", "ID": 2},
+    {"name": "f(x) = sqrt(x)", "image": "fn_sqrt(x).png", "ID": 3},
+    {"name": "f(x) = 1 - x", "image": "fn_1minusx.png", "ID": 4}
 ]
 
-# Functions f(x) that transform bar heights.
-def f_identity(h):
-    return h
-
-def f_square(h):
-    return h ** 2
-
-def f_sqrt(h):
-    return math.sqrt(h)
-
-def f_invert(h):
-    return 1.0 - h
-
-def f_compress(h):
-    return 0.5 + (h - 0.5) * 0.5
-
-functions = [
-    {"name": "f(x) = x", "fn": f_identity},
-    {"name": "f(x) = x^2", "fn": f_square},
-    {"name": "f(x) = sqrt(x)", "fn": f_sqrt},
-    {"name": "f(x) = 1 - x", "fn": f_invert},
-    {"name": "f(x) = 0.5 + 0.5*(x-0.5)", "fn": f_compress},
+# Potential Answers
+# -----------------------------
+# CHANGED AS OF 2025-11-20
+# -----------------------------
+answers = [
+    {"name": "Answer 1", "image": "", "Dist ID": 2, "Function ID": 1},
+    {"name": "Answer 2", "image": "", "Dist ID": 5, "Function ID": 3},
 ]
 
 # -----------------------------
@@ -84,8 +60,6 @@ functions = [
 # -----------------------------
 current_dist_index = 0
 current_func_index = 0
-
-target_hist = None
 answer_dist_index = 0
 answer_func_index = 0
 
@@ -95,26 +69,11 @@ time_left = ROUND_TIME
 game_state = "PLAYING"  # PLAYING, WON, LOST_TIME, LOST_FINGERS
 message = ""
 
-
 # -----------------------------
-# UTILITY FUNCTIONS
+# CHANGED AS OF 2025-11-20
 # -----------------------------
-def normalize_hist(heights):
-    """Scale so the max bar is 1.0."""
-    m = max(heights)
-    if m == 0:
-        return heights[:]
-    return [h / m for h in heights]
-
-
-def apply_function_to_hist(heights, func):
-    """Apply f() to each bar height and renormalize."""
-    transformed = [max(0.0, func(h)) for h in heights]
-    return normalize_hist(transformed)
-
-
 def generate_new_puzzle():
-    global target_hist, answer_dist_index, answer_func_index
+    global answer_dist_index, answer_func_index
     global current_dist_index, current_func_index
     global time_left, game_state, message, fingers_left
 
@@ -128,28 +87,11 @@ def generate_new_puzzle():
     answer_dist_index = random.randrange(len(distributions))
     answer_func_index = random.randrange(len(functions))
 
-    base = distributions[answer_dist_index]["heights"]
-    fn = functions[answer_func_index]["fn"]
-    target_hist = apply_function_to_hist(base, fn)
+    base = distributions[answer_dist_index]["ID"]
+    fn = functions[answer_func_index]["ID"]
+    answer_key = [base, fn]
 
-
-def draw_histogram(screen, heights, x, y, width, height, color):
-    """Draw a histogram with given bar heights in [0,1]."""
-    if heights is None:
-        return
-
-    n = len(heights)
-    if n == 0:
-        return
-
-    bar_width = width / n
-    for i, h in enumerate(heights):
-        bar_h = h * height
-        left = x + i * bar_width
-        top = y + (height - bar_h)
-        rect = Rect(left, top, bar_width - 2, bar_h)
-        screen.draw.filled_rect(rect, color)
-
+    return answer_key
 
 def draw_hourglass_bar(screen, x, y, width, height, t_left, t_total):
     ratio = max(0.0, min(1.0, t_left / t_total))
@@ -158,10 +100,6 @@ def draw_hourglass_bar(screen, x, y, width, height, t_left, t_total):
     fg_rect = Rect(x, y, width * ratio, height)
     screen.draw.filled_rect(fg_rect, YELLOW)
 
-
-# -----------------------------
-# PYGAME ZERO HOOKS
-# -----------------------------
 def update(dt):
     global time_left, game_state, message
     if game_state != "PLAYING":
@@ -172,7 +110,7 @@ def update(dt):
         time_left = 0
         if game_state == "PLAYING":
             game_state = "LOST_TIME"
-            message = "The hourglass runs out... The Queen dies. Inigo wins."
+            message = "The hourglass runs out...The Queen dies. Inigo wins."
 
 
 def on_key_down(key):
@@ -207,7 +145,9 @@ def on_key_down(key):
     elif key in (K_SPACE, K_RETURN):
         check_answer()
 
-
+# -----------------------------
+# 
+# -----------------------------
 def check_answer():
     global fingers_left, game_state, message
 
