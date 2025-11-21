@@ -1,4 +1,4 @@
-# The Countdown of Conte Carlos – Analysis & Design
+# Group 8: The Countdown of Conte Carlos – Analysis & Design
 
 ### Finn Maguire & Jericho Morallo
 ## 1. Game Overview
