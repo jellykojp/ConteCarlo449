@@ -1,5 +1,6 @@
 import random
 from pygame import Rect
+import pgzrun
 
 # -----------------------------
 # BASIC PYGAME ZERO SETTINGS
@@ -63,6 +64,8 @@ current_func_index = 0
 answer_dist_index = 0
 answer_func_index = 0
 
+answer_key = []
+
 fingers_left = MAX_FINGERS
 time_left = ROUND_TIME
 
@@ -70,12 +73,12 @@ game_state = "PLAYING"  # PLAYING, WON, LOST_TIME, LOST_FINGERS
 message = ""
 
 # -----------------------------
-# CHANGED AS OF 2025-11-20
+# CHANGED AS OF 2025-11-25
 # -----------------------------
 def generate_new_puzzle():
     global answer_dist_index, answer_func_index
     global current_dist_index, current_func_index
-    global time_left, game_state, message, fingers_left
+    global time_left, game_state, message, fingers_left, answer_key
 
     time_left = ROUND_TIME
     game_state = "PLAYING"
@@ -84,12 +87,9 @@ def generate_new_puzzle():
     current_dist_index = 0
     current_func_index = 0
 
-    answer_dist_index = random.randrange(len(distributions))
-    answer_func_index = random.randrange(len(functions))
+    answer_index = random.choice([0,1])
 
-    base = distributions[answer_dist_index]["ID"]
-    fn = functions[answer_func_index]["ID"]
-    answer_key = [base, fn]
+    answer_key = [answers[answer_index]["Dist ID"], answers[answer_index]["Function ID"]]
 
     return answer_key
 
@@ -124,7 +124,13 @@ def on_key_down(key):
         K_DOWN,
         K_SPACE,
         K_RETURN,
+        # do something here :P
         K_r,
+        K_a,
+        K_d,
+        K_j,
+        K_l,
+
     )
 
     if key == K_r:
@@ -146,15 +152,14 @@ def on_key_down(key):
         check_answer()
 
 # -----------------------------
-# 
+# Check Answer Function
 # -----------------------------
 def check_answer():
     global fingers_left, game_state, message
 
-    if (
-        current_dist_index == answer_dist_index
-        and current_func_index == answer_func_index
-    ):
+    guess = [current_dist_index, current_func_index]
+
+    if guess == answer_key:
         game_state = "WON"
         message = "Correct! Carlos is recognized as the true heir."
     else:
@@ -168,10 +173,12 @@ def check_answer():
                 + str(fingers_left)
             )
 
-
+# =====================
+# Need to adjust still
+# ====================
 def draw():
     screen.clear()
-    screen.fill(BLACK)
+    screen.fill(BLACK) # currently a black background
 
     margin = 30
     hist_width = (WIDTH - margin * 3) / 2
@@ -179,20 +186,11 @@ def draw():
 
     # Target histogram
     screen.draw.text(
-        "Target histogram (white) - match this:",
+        "Target histogram: Match It Or Die",
         (WIDTH / 2, margin),
         fontsize=30,
         color=WHITE,
         center=(WIDTH / 2, margin + 10),
-    )
-    draw_histogram(
-        screen,
-        target_hist,
-        margin,
-        margin + 40,
-        WIDTH - margin * 2,
-        hist_height,
-        WHITE,
     )
 
     # Left lever: distribution
@@ -205,16 +203,8 @@ def draw():
         color=BLUE,
     )
 
-    current_dist = distributions[current_dist_index]
-    draw_histogram(
-        screen,
-        current_dist["heights"],
-        left_x,
-        left_y,
-        hist_width,
-        hist_height,
-        BLUE,
-    )
+    # Distribution Image
+    current_dist = Actor(distributions[current_dist_index]["image"], (150,150))
 
     screen.draw.text(
         "Current: " + current_dist["name"],
@@ -232,19 +222,9 @@ def draw():
         fontsize=24,
         color=GREEN,
     )
-
-    current_fn = functions[current_func_index]["fn"]
-    preview_hist = apply_function_to_hist(current_dist["heights"], current_fn)
-
-    draw_histogram(
-        screen,
-        preview_hist,
-        right_x,
-        right_y,
-        hist_width,
-        hist_height,
-        GREEN,
-    )
+    
+    # Function Image
+    current_fn = Actor(functions[current_func_index]["image"], (150,50))
 
     screen.draw.text(
         "Current: " + functions[current_func_index]["name"],
@@ -329,3 +309,5 @@ def draw():
 # START FIRST PUZZLE
 # -----------------------------
 generate_new_puzzle()
+
+pgzrun.go()
