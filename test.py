@@ -1,12 +1,11 @@
 import random
 from pygame import Rect
-import pgzrun
-
+import pygame
 # -----------------------------
 # BASIC PYGAME ZERO SETTINGS
 # -----------------------------
-WIDTH = 900
-HEIGHT = 600
+WIDTH = 1280
+HEIGHT = 720
 TITLE = "The Countdown of Conte Carlos"
 
 # -----------------------------
@@ -29,22 +28,22 @@ BLUE    = (80, 80, 220)
 # CHANGED AS OF 2025-11-20
 # -----------------------------
 distributions = [
-    {"name": "Normal Distribution","image": "dis_normal.png","ID": 1},
-    {"name": "Skewed Right", "image": "dist_skw_right.png", "ID": 2},
-    {"name": "Skewed Left", "image": "dist_skw_left.png", "ID": 3},
-    {"name": "Uniform", "image": "dist_uniform.png", "ID": 4},
-    {"name": "Bimodal (Symmetric)", "image": "dist_bimodal_sym.png", "ID": 5},
-    {"name": "Bimodal (Non-symmetric)", "image": "dist_bimodal_sym.png", "ID": 6},
+    {"name": "Normal Distribution","image": 'dist_normal.png',"ID": 1},
+    {"name": "Skewed Right", "image": 'dist_rightskw.png', "ID": 2},
+    #{"name": "Skewed Left", "image": 'dist_skw_left.png', "ID": 3},
+    #{"name": "Uniform", "image": 'dist_uniform.png', "ID": 4},
+    #{"name": "Bimodal (Symmetric)", "image": 'dist_bimodal_sym.png', "ID": 5},
+    #{"name": "Bimodal (Non-symmetric)", "image": 'dist_bimodal_sym.png', "ID": 6},
 ]
 # Functions
 # -----------------------------
 # CHANGED AS OF 2025-11-20
 # -----------------------------
 functions = [
-    {"name": "f(x) = x", "image": "fn_x.png", "ID": 1 },
-    {"name": "f(x) = x^2", "image": "fn_x^2.png", "ID": 2},
-    {"name": "f(x) = sqrt(x)", "image": "fn_sqrt(x).png", "ID": 3},
-    {"name": "f(x) = 1 - x", "image": "fn_1minusx.png", "ID": 4}
+    {"name": "f(x) = x", "image": 'fn_x.png', "ID": 1 },
+    {"name": "f(x) = x^2", "image": 'fn_x^2.png', "ID": 2},
+    {"name": "f(x) = sqrt(x)", "image": 'fn_sqrt(x).png', "ID": 3},
+    {"name": "f(x) = 1 - x", "image": 'fn_1minusx.png', "ID": 4}
 ]
 
 # Potential Answers
@@ -52,8 +51,8 @@ functions = [
 # CHANGED AS OF 2025-11-20
 # -----------------------------
 answers = [
-    {"name": "Answer 1", "image": "", "Dist ID": 2, "Function ID": 1},
-    {"name": "Answer 2", "image": "", "Dist ID": 5, "Function ID": 3},
+    {"name": "Answer 1", "image": '', "Dist ID": 1, "Function ID": 1},
+    {"name": "Answer 2", "image": '', "Dist ID": 5, "Function ID": 3},
 ]
 
 # -----------------------------
@@ -87,7 +86,7 @@ def generate_new_puzzle():
     current_dist_index = 0
     current_func_index = 0
 
-    answer_index = random.choice([0,1])
+    answer_index = random.randrange(len(answers))
 
     answer_key = [answers[answer_index]["Dist ID"], answers[answer_index]["Function ID"]]
 
@@ -157,7 +156,7 @@ def on_key_down(key):
 def check_answer():
     global fingers_left, game_state, message
 
-    guess = [current_dist_index, current_func_index]
+    guess = [distributions[current_dist_index]["ID"], functions[current_func_index]["ID"]]
 
     if guess == answer_key:
         game_state = "WON"
@@ -172,8 +171,20 @@ def check_answer():
                 "Wrong choice! Carlos loses a finger. Fingers left: "
                 + str(fingers_left)
             )
+# scale the image so its not fugly
+def make_scaled_actor(image_name, center, max_width, max_height):
+    a = Actor(image_name)
+    # Compute scale factor so it fits in the box [max_width x max_height]
+    scale = min(max_width / a.width, max_height / a.height, 1.0)
+    if scale < 1.0:
+        new_w = int(a.width * scale)
+        new_h = int(a.height * scale)
+        a._surf = pygame.transform.smoothscale(a._surf, (new_w, new_h))
+        a._update_pos()  # internal, but works fine
+    a.pos = center
+    return a
 
-# =====================
+# ===================
 # Need to adjust still
 # ====================
 def draw():
@@ -204,14 +215,9 @@ def draw():
     )
 
     # Distribution Image
-    current_dist = Actor(distributions[current_dist_index]["image"], (150,150))
-
-    screen.draw.text(
-        "Current: " + current_dist["name"],
-        (left_x, left_y + hist_height + 10),
-        fontsize=22,
-        color=WHITE,
-    )
+    dist_image = distributions[current_dist_index]["image"]
+    current_dist = make_scaled_actor(dist_image, (WIDTH * 0.25, HEIGHT * 0.65, 400, 250))
+    current_dist.draw()
 
     # Right lever: function
     right_x = margin * 2 + hist_width
@@ -224,14 +230,9 @@ def draw():
     )
     
     # Function Image
-    current_fn = Actor(functions[current_func_index]["image"], (150,50))
-
-    screen.draw.text(
-        "Current: " + functions[current_func_index]["name"],
-        (right_x, right_y + hist_height + 10),
-        fontsize=22,
-        color=WHITE,
-    )
+    fn_img = functions[current_func_index]["image"]
+    current_fn = make_scaled_actor(fn_img, (WIDTH * 0.75, HEIGHT * 0.65), 400, 250)
+    current_fn.draw()
 
     # Bottom info: fingers, time, message
     info_y = HEIGHT - 80
@@ -309,5 +310,3 @@ def draw():
 # START FIRST PUZZLE
 # -----------------------------
 generate_new_puzzle()
-
-pgzrun.go()
