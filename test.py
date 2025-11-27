@@ -1,6 +1,7 @@
 import random
 from pygame import Rect
 import pygame
+import pgzrun
 # -----------------------------
 # BASIC PYGAME ZERO SETTINGS
 # -----------------------------
@@ -30,10 +31,10 @@ BLUE    = (80, 80, 220)
 distributions = [
     {"name": "Normal Distribution","image": 'dist_normal.png',"ID": 1},
     {"name": "Skewed Right", "image": 'dist_rightskw.png', "ID": 2},
-    #{"name": "Skewed Left", "image": 'dist_skw_left.png', "ID": 3},
-    #{"name": "Uniform", "image": 'dist_uniform.png', "ID": 4},
-    #{"name": "Bimodal (Symmetric)", "image": 'dist_bimodal_sym.png', "ID": 5},
-    #{"name": "Bimodal (Non-symmetric)", "image": 'dist_bimodal_sym.png', "ID": 6},
+    {"name": "Skewed Left", "image": 'dist_leftskw.png', "ID": 3},
+    {"name": "Uniform", "image": 'dist_uniform.png', "ID": 4},
+    {"name": "Bimodal (Symmetric)", "image": 'dist_symbimodal.png', "ID": 5},
+    {"name": "Bimodal (Non-symmetric)", "image": 'dist_asymbimodal.png', "ID": 6},
 ]
 # Functions
 # -----------------------------
@@ -43,7 +44,7 @@ functions = [
     {"name": "f(x) = x", "image": 'fn_x.png', "ID": 1 },
     {"name": "f(x) = x^2", "image": 'fn_x^2.png', "ID": 2},
     {"name": "f(x) = sqrt(x)", "image": 'fn_sqrt(x).png', "ID": 3},
-    {"name": "f(x) = 1 - x", "image": 'fn_1minusx.png', "ID": 4}
+    {"name": "f(x) = 1 - x", "image": 'fn_1minusx.png', "ID": 4},
 ]
 
 # Potential Answers
@@ -51,8 +52,16 @@ functions = [
 # CHANGED AS OF 2025-11-20
 # -----------------------------
 answers = [
-    {"name": "Answer 1", "image": '', "Dist ID": 1, "Function ID": 1},
-    {"name": "Answer 2", "image": '', "Dist ID": 5, "Function ID": 3},
+    {"name": "Answer 1", "image": 'ans_bimodal_sym_fn_sqrtx.png', "Dist ID": 5, "Function ID": 3},
+    {"name": "Answer 2", "image": 'ans_bimodal_asym_fn_x2.png', "Dist ID": 6, "Function ID": 2},
+    {"name": "Answer 3", "image": 'ans_bimodal_sym_fn_x.png', "Dist ID": 5, "Function ID": 1},
+    {"name": "Answer 4", "image": 'ans_left_skew_fn_1minusx.png', "Dist ID": 3, "Function ID": 4},
+    {"name": "Answer 5", "image": 'ans_left_skew_fn_sqrtx.png', "Dist ID": 3, "Function ID": 3},
+    {"name": "Answer 6", "image": 'ans_normal_fn_x.png', "Dist ID": 1, "Function ID": 1},
+    {"name": "Answer 7", "image": 'ans_right_skew_fn_x2.png', "Dist ID": 2, "Function ID": 2},
+    {"name": "Answer 8", "image": 'ans_uniform_fn_sqrtx.png', "Dist ID": 4, "Function ID": 3},
+    {"name": "Answer 9", "image": 'ans_normal_fn_x2.png', "Dist ID": 1, "Function ID": 2},
+    {"name": "Answer 10", "image": 'ans_bimodal_asym_fn_1minusx.png', "Dist ID": 6, "Function ID": 4},
 ]
 
 # -----------------------------
@@ -71,6 +80,9 @@ time_left = ROUND_TIME
 game_state = "PLAYING"  # PLAYING, WON, LOST_TIME, LOST_FINGERS
 message = ""
 
+target_actor = None
+current_answer_index = 0
+
 # -----------------------------
 # CHANGED AS OF 2025-11-25
 # -----------------------------
@@ -78,6 +90,7 @@ def generate_new_puzzle():
     global answer_dist_index, answer_func_index
     global current_dist_index, current_func_index
     global time_left, game_state, message, fingers_left, answer_key
+    global target_actor, current_answer_index
 
     time_left = ROUND_TIME
     game_state = "PLAYING"
@@ -86,11 +99,15 @@ def generate_new_puzzle():
     current_dist_index = 0
     current_func_index = 0
 
-    answer_index = random.randrange(len(answers))
+    current_answer_index = random.randrange(len(answers))
+    ans = answers[current_answer_index]
 
-    answer_key = [answers[answer_index]["Dist ID"], answers[answer_index]["Function ID"]]
+    # set the logical answer key (IDs)
+    answer_key = [ans["Dist ID"], ans["Function ID"]]
 
-    return answer_key
+    # build the visual target histogram at the top-center
+    img_name = ans["image"]   # e.g. "ans_bimodal_sym_fn_sqrtx.png"
+    target_actor = make_scaled_actor(img_name, (WIDTH * 0.5, HEIGHT), 600, 250)
 
 def draw_hourglass_bar(screen, x, y, width, height, t_left, t_total):
     ratio = max(0.0, min(1.0, t_left / t_total))
@@ -117,10 +134,6 @@ def on_key_down(key):
     global game_state, message, fingers_left
 
     from pygame.locals import (
-        K_LEFT,
-        K_RIGHT,
-        K_UP,
-        K_DOWN,
         K_SPACE,
         K_RETURN,
         # do something here :P
@@ -139,15 +152,15 @@ def on_key_down(key):
     if game_state != "PLAYING":
         return
 
-    if key == K_LEFT:
+    if key == K_a:
         current_dist_index = (current_dist_index - 1) % len(distributions)
-    elif key == K_RIGHT:
+    elif key == K_d:
         current_dist_index = (current_dist_index + 1) % len(distributions)
-    elif key == K_UP:
+    elif key == K_j:
         current_func_index = (current_func_index - 1) % len(functions)
-    elif key == K_DOWN:
+    elif key == K_l:
         current_func_index = (current_func_index + 1) % len(functions)
-    elif key in (K_SPACE, K_RETURN):
+    elif key == K_RETURN:
         check_answer()
 
 # -----------------------------
@@ -189,52 +202,52 @@ def make_scaled_actor(image_name, center, max_width, max_height):
 # ====================
 def draw():
     screen.clear()
-    screen.fill(BLACK) # currently a black background
+    screen.fill(BLACK)
 
     margin = 30
-    hist_width = (WIDTH - margin * 3) / 2
-    hist_height = 200
 
-    # Target histogram
+    # ----- Target title -----
     screen.draw.text(
         "Target histogram: Match It Or Die",
-        (WIDTH / 2, margin),
+        center=(WIDTH / 2, 40),
         fontsize=30,
         color=WHITE,
-        center=(WIDTH / 2, margin + 10),
     )
 
-    # Left lever: distribution
-    left_x = margin
-    left_y = margin + 40 + hist_height + 60
+    # ----- Target answer image (we'll move this in section 2) -----
+    if target_actor is not None:
+        target_actor.draw()
+
+    # =====================
+    # LEFT LEVER: DISTRIBUTION
+    # =====================
+    dist_center = (WIDTH * 0.5, HEIGHT * 0.7)   # image center
+    dist_image = distributions[current_dist_index]["image"]
+    current_dist = make_scaled_actor(dist_image, dist_center, 400, 250)
+    current_dist.draw()
+
     screen.draw.text(
-        "Lever 1: distribution of X (left/right to change)",
-        (left_x, left_y - 40),
+        "Lever 1: distribution of X (A/D to change)",
+        center=(dist_center[0] * 0.62, dist_center[1] - 112),
         fontsize=24,
         color=BLUE,
     )
 
-    # Distribution Image
-    dist_image = distributions[current_dist_index]["image"]
-    current_dist = make_scaled_actor(dist_image, (WIDTH * 0.25, HEIGHT * 0.65, 400, 250))
-    current_dist.draw()
-
-    # Right lever: function
-    right_x = margin * 2 + hist_width
-    right_y = left_y
+    # =====================
+    # RIGHT LEVER: FUNCTION
+    # =====================
+    fn_center = (WIDTH * 1.2, HEIGHT * 0.86)     # image center
+    fn_img = functions[current_func_index]["image"]
+    current_fn = make_scaled_actor(fn_img, fn_center, 400, 250)
+    current_fn.draw()
+    
     screen.draw.text(
-        "Lever 2: function f(x) (up/down to change)",
-        (right_x, right_y - 40),
+        "Lever 2: function f(x) (J/L to change)",
+        center=(fn_center[0] * 0.62, fn_center[1] - 230),
         fontsize=24,
         color=GREEN,
     )
-    
-    # Function Image
-    fn_img = functions[current_func_index]["image"]
-    current_fn = make_scaled_actor(fn_img, (WIDTH * 0.75, HEIGHT * 0.65), 400, 250)
-    current_fn.draw()
 
-    # Bottom info: fingers, time, message
     info_y = HEIGHT - 80
 
     screen.draw.text(
@@ -263,19 +276,16 @@ def draw():
     if message:
         screen.draw.text(
             message,
-            (WIDTH / 2, info_y - 40),
+            center=(WIDTH / 2, info_y - 40),
             fontsize=26,
             color=WHITE,
-            center=(WIDTH / 2, info_y - 40),
         )
 
     screen.draw.text(
-        "Controls: <-/-> change distribution | up/down change function | "
-        "SPACE/ENTER submit | R new puzzle",
-        (WIDTH / 2, HEIGHT - 30),
+        "Controls: A/D change distribution | J/L change function | ENTER submit | R new puzzle",
+        center=(WIDTH / 2, HEIGHT - 30),
         fontsize=20,
         color=WHITE,
-        center=(WIDTH / 2, HEIGHT - 30),
     )
 
     # End screen overlay
@@ -305,8 +315,9 @@ def draw():
             color=WHITE,
         )
 
-
 # -----------------------------
 # START FIRST PUZZLE
 # -----------------------------
 generate_new_puzzle()
+
+pgzrun.go()
