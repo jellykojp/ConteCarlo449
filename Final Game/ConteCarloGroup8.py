@@ -3,7 +3,6 @@ from pygame import Rect
 import pygame
 import pgzrun
 
-
 BASE_WIDTH = 1280
 BASE_HEIGHT = 720
 WIDTH = 1600
@@ -123,6 +122,7 @@ time_left = ROUND_TIME
 game_state = "PLAYING"  # PLAYING, WON, LOST_TIME, LOST_FINGERS
 message = ""
 
+
 target_actor = None
 current_answer_index = 0
 
@@ -153,7 +153,7 @@ def generate_new_puzzle():
 
     # build the visual target histogram at the top-center
     img_name = ans["image"]   # e.g. "ans_bimodal_sym_fn_sqrtx.png"
-    target_actor = make_scaled_actor(img_name, (BASE_WIDTH * 0.58, BASE_HEIGHT * 0.92), 600, 250)
+    target_actor = make_scaled_actor(img_name, (BASE_WIDTH * 0.58, BASE_HEIGHT * 0.865), 600, 250)
 
 def get_current_background():
     if in_menu:
@@ -207,8 +207,7 @@ def update(dt):
         if game_state == "PLAYING":
             play_music("lose_music.mp3",volume=0.4)
             game_state = "LOST_TIME"
-            message = "The hourglass runs out...The Queen dies. Inigo wins."
-
+            message = "The hourglass runs out... The Queen dies. Inigo wins."
 
 def on_key_down(key):
     global current_dist_index, current_func_index
@@ -262,7 +261,14 @@ def on_key_down(key):
         current_func_index = (current_func_index + 1) % len(functions)
     elif key == K_SPACE:
         check_answer()
-        
+
+def game_over(state_text, color):
+    global end_text, game_state, end_color
+    end_text = state_text
+    message = ""
+    end_color = color
+    clock.schedule_unique(clear_message, 5.0)
+
 # -----------------------------
 # Check Answer Function
 # -----------------------------
@@ -271,21 +277,37 @@ def check_answer():
 
     guess = [distributions[current_dist_index]["ID"], functions[current_func_index]["ID"]]
 
+    fresh_pain = random.randint(1,3)
     if guess == answer_key:
         game_state = "WON"
-        message = "Correct! Carlos is recognized as the true heir."
+        message = "Correct! Carlos is Recognized as the true heir"
         play_music("win_music.mp3",volume=0.4)
     else:
+        sounds.cut_sound.play()
+        if fresh_pain == 1 and fingers_left > 1:
+            sounds.pain1_sound.play()
+        elif fresh_pain == 2 and fingers_left > 1:
+            sounds.pain2_sound.play()
+        elif fresh_pain == 3 and fingers_left > 1:
+            sounds.pain3_sound.play()
         fingers_left -= 1
         if fingers_left <= 0:
             game_state = "LOST_FINGERS"
-            message = "Wrong again... Carlos loses his last finger and dies."
+            message = "Wrong again...Carlos dies."
             play_music("lose_music.mp3")
+            clock.schedule_unique(clear_message, 5.0)
         else:
             message = (
-                "Wrong choice! Carlos loses a finger. Fingers left: "
+                "Wrong choice! Carlos loses a finger.\nFingers left: "
                 + str(fingers_left)
             )
+            clock.schedule_unique(clear_message, 3.0)
+
+def clear_message():
+    global message, end_text
+    message = ""
+    end_text = ""
+
 # scale the image so its not fugly
 def make_scaled_actor(image_name, center, max_width, max_height):
     a = Actor(image_name)
@@ -407,14 +429,15 @@ def draw():
 
         screen.draw.text(
             end_text,
-            center=pos(BASE_WIDTH / 2, HEIGHT / 2 - 30),
+            center=pos(BASE_WIDTH / 2, HEIGHT / 4),
             fontsize=fsize(60),
             color=color,
             fontname="cardinal.ttf"
         )
+
         screen.draw.text(
             "Press R to Return to Menu",
-            center=pos(WIDTH / 2, HEIGHT / 2 + 40),
+            center=pos(WIDTH / 1.45, HEIGHT / 30),
             fontsize=fsize(30),
             color=WHITE,
             fontname="cardinal.ttf"
@@ -438,14 +461,14 @@ def draw():
     # =====================
     # LEFT LEVER: DISTRIBUTION
     # =====================
-    dist_center = (BASE_WIDTH * 0.40, BASE_HEIGHT * 0.6)   # image center
+    dist_center = (BASE_WIDTH * 0.40, BASE_HEIGHT * 0.55)   # image center
     dist_image = distributions[current_dist_index]["image"]
     current_dist = make_scaled_actor(dist_image, dist_center, 400, 250)
     current_dist.draw()
 
     screen.draw.text(
         "Lever 1: distribution of X (A/D to change)",
-        center=pos(BASE_WIDTH * 0.25, BASE_HEIGHT * 0.53),
+        center=pos(BASE_WIDTH * 0.25, BASE_HEIGHT * 0.48),
         fontsize=fsize(24),
         color=BLUE,
         fontname="cardinal.ttf"
@@ -454,14 +477,14 @@ def draw():
     # =====================
     # RIGHT LEVER: FUNCTION
     # =====================
-    fn_center = (BASE_WIDTH * 1.08, BASE_HEIGHT * 0.723)     # image center
+    fn_center = (BASE_WIDTH * 1.08, BASE_HEIGHT * 0.673)     # image center
     fn_img = functions[current_func_index]["image"]
     current_fn = make_scaled_actor(fn_img, fn_center, 400, 250)
     current_fn.draw()
     
     screen.draw.text(
         "Lever 2: function f(x) (J/L to change)",
-        center=pos(BASE_WIDTH * 0.73, BASE_HEIGHT * 0.53),
+        center=pos(BASE_WIDTH * 0.73, BASE_HEIGHT * 0.48),
         fontsize=fsize(24),
         color=GREEN,
         fontname="cardinal.ttf"
@@ -479,14 +502,14 @@ def draw():
 
     draw_hourglass_bar(
         screen,
-        *pos(BASE_WIDTH * 0.75, info_y + 5),
+        *pos(BASE_WIDTH * 0.74, info_y+5),
         *(size(300, 20)),
         time_left,
         ROUND_TIME,
 )
     screen.draw.text(
         f"Time left: {int(time_left)}s",
-        pos(BASE_WIDTH / 1.23, info_y + 30),
+        pos(BASE_WIDTH / 1.23, info_y - 25),
         fontsize=fsize(24),
         color=YELLOW,
         fontname="old europe.ttf"
@@ -501,9 +524,10 @@ def draw():
             fontname="cardinal.ttf"
         )
 
+
     screen.draw.text(
         "Controls: A/D change distribution | J/L change function | SPACE submit",
-        center=pos(BASE_WIDTH / 2, BASE_HEIGHT - 22),
+        center=pos(BASE_WIDTH / 2, BASE_HEIGHT - 60),
         fontsize=fsize(20),
         color=WHITE,
         fontname="cardinal.ttf"
